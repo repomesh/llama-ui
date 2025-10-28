@@ -1,7 +1,8 @@
 import asyncio
 import logging
 from workflows.server import WorkflowServer
-from test_workflows.basic_worklfow import CalculatorWorkflow
+from test_workflows.sum import SumWorkflow
+from test_workflows.subtract import SubtractWorkflow
 
 # Configure logging to output to stdout
 logging.basicConfig(
@@ -15,7 +16,8 @@ async def main() -> None:
     server = WorkflowServer()
 
     # Register workflows
-    server.add_workflow("calculator", CalculatorWorkflow())
+    server.add_workflow("sum", SumWorkflow())
+    server.add_workflow("subtract", SubtractWorkflow())
 
     # Enable auto-reload for development
     await server.serve(

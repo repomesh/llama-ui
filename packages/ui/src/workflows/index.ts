@@ -3,14 +3,14 @@ export type { WorkflowProgressState, RunStatus } from "./types";
 
 export * from "./store/workflow-event";
 
-// Store (deprecated - use hooks instead)
-export { createHandlerStore } from "./store/handler-store";
-
-// Types
+// Store classes
 export { Handler } from "./store/handler";
+export { Handlers } from "./store/handlers";
+export { Workflow } from "./store/workflow";
+export { Workflows } from "./store/workflows";
 
 // Hooks
-export { useHandlerStore } from "./hooks";
+export { useWorkflow, useHandler, useHandlers, useWorkflows } from "./hooks";
 
 // Components
 export { WorkflowTrigger } from "./components";

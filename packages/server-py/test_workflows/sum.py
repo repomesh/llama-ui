@@ -2,21 +2,13 @@ import asyncio
 from workflows.context import Context
 from workflows import Workflow, step
 from workflows.events import Event, StartEvent, StopEvent
-from enum import Enum
 from logging import getLogger
 
 logger = getLogger(__name__)
 
-class Operation(Enum):
-    SUM = "sum"
-    SUBTRACT = "subtract"
-    MULTIPLY = "multiply"
-    DIVIDE = "divide"
-
-class CalculatorInput(StartEvent):
+class SumInput(StartEvent):
     a: int
     b: int
-    operation: Operation
 
 class ProgressEvent(Event):
     step: str
@@ -26,17 +18,16 @@ class ProgressEvent(Event):
 class CalculateRequestEvent(Event):
     a: int
     b: int
-    operation: Operation
 
 class CalculateResponseEvent(Event):
     result: int
 
-class CalculatorOutput(StopEvent):
+class SumOutput(StopEvent):
     results: int
 
-class CalculatorWorkflow(Workflow):
+class SumWorkflow(Workflow):
     @step
-    async def initialize(self, ctx: Context, ev: CalculatorInput) -> CalculateRequestEvent:
+    async def initialize(self, ctx: Context, ev: SumInput) -> CalculateRequestEvent:
         logger.info("Starting sum workflow")
         ctx.write_event_to_stream(
             ProgressEvent(
@@ -46,7 +37,7 @@ class CalculatorWorkflow(Workflow):
             )
         )
         await asyncio.sleep(1.0)
-        return CalculateRequestEvent(a=ev.a, b=ev.b, operation=ev.operation)
+        return CalculateRequestEvent(a=ev.a, b=ev.b)
     
     @step
     async def sum(self, ctx: Context, ev: CalculateRequestEvent) -> CalculateResponseEvent:
@@ -59,18 +50,11 @@ class CalculatorWorkflow(Workflow):
                 message="Calculating result"
             )
         )
-        if ev.operation == Operation.SUM:
-            result = ev.a + ev.b
-        elif ev.operation == Operation.SUBTRACT:
-            result = ev.a - ev.b
-        elif ev.operation == Operation.MULTIPLY:
-            result = ev.a * ev.b
-        elif ev.operation == Operation.DIVIDE:
-            result = ev.a / ev.b
+        result = ev.a + ev.b
         return CalculateResponseEvent(result=result)
 
     @step
-    async def finalize(self, ctx: Context, ev: CalculateResponseEvent) -> CalculatorOutput:
+    async def finalize(self, ctx: Context, ev: CalculateResponseEvent) -> SumOutput:
         logger.info("Finalizing result")
         await asyncio.sleep(1.0)
-        return CalculatorOutput(results=ev.result)
+        return SumOutput(results=ev.result)

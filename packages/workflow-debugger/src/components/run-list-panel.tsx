@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useHandlerStore, Skeleton, Handler } from "@llamaindex/ui";
+import { Skeleton, Handler, useHandlers } from "@llamaindex/ui";
 
 interface RunListPanelProps {
   activeHandlerId: string | null;
@@ -10,12 +10,12 @@ export function RunListPanel({
   activeHandlerId,
   onHandlerSelect,
 }: RunListPanelProps) {
-  const { handlers, fetchRunningHandlers } = useHandlerStore();
+  const { handlers, fetch } = useHandlers();
   const [loading, setLoading] = useState(false);
   useEffect(() => {
     setLoading(true);
-    fetchRunningHandlers().finally(() => setLoading(false));
-  }, [fetchRunningHandlers]);
+    fetch().finally(() => setLoading(false));
+  }, [fetch]);
 
   const formatHandlerDisplay = (handler: Handler) => {
     const name = handler.workflowName || "Unknown";

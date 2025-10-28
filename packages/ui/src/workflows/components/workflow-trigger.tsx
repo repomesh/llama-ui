@@ -10,7 +10,7 @@ import {
   type FileUploaderProps,
   type FileUploadData,
 } from "../../file-upload";
-import { useHandlerStore } from "../hooks/use-handler-store";
+import { useWorkflow } from "../hooks";
 import { Handler } from "../store/handler";
 import { JSONValue } from "../types";
 
@@ -38,7 +38,7 @@ export function WorkflowTrigger({
   description = "Upload files to start workflow processing",
   ...fileUploaderProps
 }: WorkflowTriggerProps) {
-  const { createHandler } = useHandlerStore();
+  const { createHandler } = useWorkflow(workflowName);
   const [isCreating, setIsCreating] = useState(false);
 
   const handleFileUpload = useCallback(

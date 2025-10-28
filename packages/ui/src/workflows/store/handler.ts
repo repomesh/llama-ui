@@ -12,7 +12,7 @@ import {
   workflowStreamingManager,
 } from "../../lib/shared-streaming";
 import { logger } from "@shared/logger";
-import { StopEvent, WorkflowEvent, WorkflowEventType } from "./workflow-event";
+import { isStopEvent, StopEvent, WorkflowEvent } from "./workflow-event";
 
 /**
  * This handler won't communicate with server to sync status unless developers explicitly call stream.
@@ -51,7 +51,7 @@ export class Handler {
       : null;
   }
 
-  async sendEvent<E extends WorkflowEvent>(event: E, step?: string) {
+  sendEvent = async <E extends WorkflowEvent>(event: E, step?: string) => {
     const rawEvent = event.toRawEvent(); // convert to raw event before sending
     const data = await postEventsByHandlerId({
       client: this.client,
@@ -63,9 +63,9 @@ export class Handler {
     });
 
     return data.data;
-  }
+  };
 
-  async getResult(): Promise<StopEvent | undefined> {
+  getResult = async (): Promise<StopEvent | undefined> => {
     const data = await getResultsByHandlerId({
       client: this.client,
       path: { handler_id: this.handlerId },
@@ -73,12 +73,12 @@ export class Handler {
     return data.data?.result
       ? (WorkflowEvent.fromRawEvent(data.data.result as RawEvent) as StopEvent)
       : undefined;
-  }
+  };
 
-  subscribeToEvents(
+  subscribeToEvents = (
     callbacks?: StreamSubscriber<WorkflowEvent>,
     includeInternal = false
-  ): StreamOperation<WorkflowEvent> {
+  ): StreamOperation<WorkflowEvent> => {
     const streamKey = `handler:${this.handlerId}`;
 
     // Convert callback to SharedStreamingManager subscriber
@@ -146,28 +146,28 @@ export class Handler {
     this._canceler = canceler;
 
     return { promise, unsubscribe, disconnect, cancel };
-  }
+  };
 
-  disconnect(): void {
+  disconnect = (): void => {
     if (!this._disconnect) {
       throw new Error("Handler not subscribed yet");
     }
     this._disconnect?.();
-  }
+  };
 
-  unsubscribe(): void {
+  unsubscribe = (): void => {
     if (!this._unsubscribe) {
       throw new Error("Handler not subscribed yet");
     }
     this._unsubscribe?.();
-  }
+  };
 
-  cancel(): void {
+  cancel = (): void => {
     if (!this._canceler) {
       throw new Error("Handler not subscribed yet");
     }
     this._canceler?.();
-  }
+  };
 }
 
 function streamByEventSource(
@@ -209,7 +209,7 @@ function streamByEventSource(
       );
       callbacks.onData?.(workflowEvent);
       accumulatedEvents.push(workflowEvent);
-      if (workflowEvent.type === WorkflowEventType.StopEvent) {
+      if (isStopEvent(workflowEvent)) {
         callbacks.onSuccess?.(accumulatedEvents);
         logger.debug(
           "[streamByEventSource] stop event received, closing event source"

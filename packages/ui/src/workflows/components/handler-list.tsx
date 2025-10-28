@@ -3,7 +3,7 @@
  * Displays a list of workflow handlers with their status
  */
 
-import { useHandlerStore } from "../hooks/use-handler-store";
+import { useHandlers } from "../hooks";
 import type { Handler } from "../store/handler";
 import { Button } from "@/base/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/base/card";
@@ -14,12 +14,8 @@ export interface HandlerListProps {
 }
 
 export function HandlerList({ onSelectHandler }: HandlerListProps) {
-  const handlers = useHandlerStore((state) => state.handlers);
-  const fetchRunningHandlers = useHandlerStore(
-    (state) => state.fetchRunningHandlers
-  );
-
-  const handlerArray = Object.values(handlers);
+  const { handlers, fetch } = useHandlers();
+  const handlerList = Object.values(handlers);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -40,12 +36,12 @@ export function HandlerList({ onSelectHandler }: HandlerListProps) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Workflow Handlers</h2>
-        <Button onClick={() => fetchRunningHandlers()} variant="outline">
+        <Button onClick={() => fetch()} variant="outline">
           Refresh
         </Button>
       </div>
 
-      {handlerArray.length === 0 ? (
+      {handlerList.length === 0 ? (
         <Card>
           <CardContent className="pt-6">
             <p className="text-center text-muted-foreground">
@@ -55,7 +51,7 @@ export function HandlerList({ onSelectHandler }: HandlerListProps) {
         </Card>
       ) : (
         <div className="space-y-2">
-          {handlerArray.map((handler) => (
+          {handlerList.map((handler) => (
             <Card
               key={handler.handlerId}
               className="cursor-pointer hover:bg-accent transition-colors"

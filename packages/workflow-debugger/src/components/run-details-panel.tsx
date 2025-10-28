@@ -10,10 +10,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  useHandlerStore,
   isBuiltInEvent,
 } from "@llamaindex/ui";
-import type { WorkflowEvent } from "@llamaindex/ui";
+import { useHandler, type WorkflowEvent } from "@llamaindex/ui";
 import { CodeBlock } from "./code-block";
 import { WorkflowVisualization } from "./workflow-visualization";
 import { SendEventDialog } from "./send-event-dialog";
@@ -27,7 +26,7 @@ type JSONValue =
   | Array<JSONValue>;
 
 interface RunDetailsPanelProps {
-  handlerId: string | null;
+  handlerId: string;
   selectedWorkflow?: string | null;
   tab?: "visualization" | "events";
   onTabChange?: (value: "visualization" | "events") => void;
@@ -37,7 +36,7 @@ export function RunDetailsPanel({
   handlerId,
   selectedWorkflow,
 }: RunDetailsPanelProps) {
-  const handler = useHandlerStore((state) => state.handlers[handlerId ?? ""]);
+  const handler = useHandler(handlerId);
   const [compactJson, setCompactJson] = useState(false);
   const [hideInternal, setHideInternal] = useState(true);
   const [finalResult, setFinalResult] = useState<JSONValue | null>(null);
@@ -68,30 +67,28 @@ export function RunDetailsPanel({
   };
 
   useEffect(() => {
-    if (handler) {
-      handler.subscribeToEvents(
-        {
-          onData: (event: WorkflowEvent) => {
-            setEvents((prev: WorkflowEvent[]) => {
-              return [...prev, event].sort(
-                (a, b) => a.timestamp.getTime() - b.timestamp.getTime(),
-              );
-            });
-          },
-          onSuccess(allEvents) {
-            setEvents(allEvents);
-            setFinalResult(handler.result?.data.result ?? null);
-          },
-          onError(error) {
-            setFinalResultError(error.message);
-          },
+    handler.subscribeToEvents(
+      {
+        onData: (event: WorkflowEvent) => {
+          setEvents((prev: WorkflowEvent[]) => {
+            return [...prev, event].sort(
+              (a, b) => a.timestamp.getTime() - b.timestamp.getTime(),
+            );
+          });
         },
-        true,
-      );
-      return () => {
-        handler.disconnect();
-      };
-    }
+        onSuccess(allEvents) {
+          setEvents(allEvents);
+          setFinalResult(handler.result?.data.result ?? null);
+        },
+        onError(error) {
+          setFinalResultError(error.message);
+        },
+      },
+      true,
+    );
+    return () => {
+      handler.disconnect();
+    };
   }, [handler]);
 
   // Reset events, timestamps and result when switching handlers
@@ -114,15 +111,11 @@ export function RunDetailsPanel({
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-sm">Run Details</h2>
           <div className="flex items-center gap-2">
-            {handler && (
-              <Badge
-                variant={
-                  handler.status === "completed" ? "default" : "secondary"
-                }
-              >
-                {handler.status}
-              </Badge>
-            )}
+            <Badge
+              variant={handler.status === "completed" ? "default" : "secondary"}
+            >
+              {handler.status}
+            </Badge>
             <SendEventDialog
               handlerId={handlerId}
               workflowName={selectedWorkflow ?? null}
@@ -134,17 +127,14 @@ export function RunDetailsPanel({
             />
           </div>
         </div>
-        {handler ? (
-          <p className="text-xs text-muted-foreground font-mono mt-1">
+        <div className="flex items-center justify-between gap-2 mt-2">
+          <span className="text-xs text-muted-foreground font-mono">
             {handler.handlerId}
-          </p>
-        ) : (
-          <p className="text-xs text-muted-foreground mt-1">
-            {selectedWorkflow
-              ? "Visualization available before run starts"
-              : "Select a workflow to visualize"}
-          </p>
-        )}
+          </span>
+          <span className="text-xs text-muted-foreground font-mono">
+            Last updated: {handler.updatedAt?.toLocaleString()}
+          </span>
+        </div>
       </div>
 
       {/* Side-by-side content */}
