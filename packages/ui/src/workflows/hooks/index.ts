@@ -4,10 +4,11 @@ import { Handler } from "../store/handler";
 import { Handlers } from "../store/handlers";
 import { Workflows } from "../store/workflows";
 import { getOrCreate } from "@/src/shared/store";
+import { proxy } from "valtio";
 
 export function useHandlers(): Handlers {
   const client = useWorkflowsClient();
-  return getOrCreate<Handlers>("handlers", () => new Handlers(client));
+  return getOrCreate<Handlers>("handlers", () => proxy<Handlers>(new Handlers(client)));
 }
 
 export function useWorkflows(): Workflows {
@@ -15,7 +16,7 @@ export function useWorkflows(): Workflows {
   const handlers = useHandlers();
   return getOrCreate<Workflows>(
     "workflows",
-    () => new Workflows(client, handlers)
+    () => proxy<Workflows>(new Workflows(client, handlers))
   );
 }
 
@@ -24,7 +25,7 @@ export function useWorkflow(name: string): Workflow {
   const handlers = useHandlers();
   return getOrCreate<Workflow>(
     "workflow:" + name,
-    () => new Workflow(client, name, handlers)
+    () => proxy<Workflow>(new Workflow(client, name, handlers))
   );
 }
 
