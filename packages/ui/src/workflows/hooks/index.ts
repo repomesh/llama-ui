@@ -8,24 +8,24 @@ import { proxy } from "valtio";
 
 export function useHandlers(): Handlers {
   const client = useWorkflowsClient();
-  return getOrCreate<Handlers>("handlers", () => proxy<Handlers>(new Handlers(client)));
+  return getOrCreate<Handlers>("handlers", () =>
+    proxy<Handlers>(new Handlers(client))
+  );
 }
 
 export function useWorkflows(): Workflows {
   const client = useWorkflowsClient();
   const handlers = useHandlers();
-  return getOrCreate<Workflows>(
-    "workflows",
-    () => proxy<Workflows>(new Workflows(client, handlers))
+  return getOrCreate<Workflows>("workflows", () =>
+    proxy<Workflows>(new Workflows(client, handlers))
   );
 }
 
 export function useWorkflow(name: string): Workflow {
   const client = useWorkflowsClient();
   const handlers = useHandlers();
-  return getOrCreate<Workflow>(
-    "workflow:" + name,
-    () => proxy<Workflow>(new Workflow(client, name, handlers))
+  return getOrCreate<Workflow>("workflow:" + name, () =>
+    proxy<Workflow>(new Workflow(client, name, handlers))
   );
 }
 
