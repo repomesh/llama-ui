@@ -70,9 +70,10 @@ export class Handler {
       client: this.client,
       path: { handler_id: this.handlerId },
     });
-    return data.data?.result
+    this.result = data.data?.result
       ? (WorkflowEvent.fromRawEvent(data.data.result as RawEvent) as StopEvent)
       : undefined;
+    return this.result;
   };
 
   subscribeToEvents = (

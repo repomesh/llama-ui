@@ -26,12 +26,13 @@ export class Workflow {
     );
   }
 
-  createHandler = async (workflowName: string, input: JSONValue) => {
+  createHandler = async (workflowName: string, input: JSONValue, handlerId?: string) => {
     const data = await postWorkflowsByNameRunNowait({
       client: this.client,
       path: { name: workflowName },
       body: {
         start_event: input as { [key: string]: unknown } | undefined,
+        handler_id: handlerId,
       },
     });
 
