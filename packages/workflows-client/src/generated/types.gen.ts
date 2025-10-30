@@ -4,6 +4,15 @@ export type ClientOptions = {
     baseUrl: `${string}://${string}` | (string & {});
 };
 
+export type EventEnvelopeWithMetadata = {
+    value: {
+        [key: string]: unknown;
+    };
+    types?: Array<string>;
+    type: string;
+    qualified_name?: string;
+};
+
 export type Handler = {
     handler_id: string;
     workflow_name: string;
@@ -16,7 +25,7 @@ export type Handler = {
     /**
      * Workflow result value
      */
-    result?: unknown;
+    result?: EventEnvelopeWithMetadata | unknown;
 };
 
 export type HandlersList = {
@@ -225,11 +234,15 @@ export type GetResultsByHandlerIdResponses = {
     /**
      * Result is available
      */
-    200: Handler;
+    200: {
+        [key: string]: unknown;
+    };
     /**
      * Result not ready yet
      */
-    202: Handler;
+    202: {
+        [key: string]: unknown;
+    };
 };
 
 export type GetResultsByHandlerIdResponse = GetResultsByHandlerIdResponses[keyof GetResultsByHandlerIdResponses];
@@ -255,6 +268,10 @@ export type GetEventsByHandlerIdData = {
          * Timeout for acquiring the lock to iterate over the events.
          */
         acquire_timeout?: number;
+        /**
+         * If true, include the qualified name of the event in the response body.
+         */
+        include_qualified_name?: boolean;
     };
     url: '/events/{handler_id}';
 };
@@ -278,9 +295,17 @@ export type GetEventsByHandlerIdResponses = {
             [key: string]: unknown;
         };
         /**
+         * The class name of the event.
+         */
+        type: string;
+        /**
+         * Superclass names from MRO (excluding the event class and base Event).
+         */
+        types?: Array<string>;
+        /**
          * The qualified name of the event.
          */
-        qualified_name: string;
+        qualified_name?: string;
     };
 };
 
@@ -289,9 +314,23 @@ export type GetEventsByHandlerIdResponse = GetEventsByHandlerIdResponses[keyof G
 export type PostEventsByHandlerIdData = {
     body: {
         /**
-         * Serialized event in JSON format.
+         * Serialized event. Accepts object or JSON-encoded string for backward compatibility.
          */
-        event: string;
+        event: string | {
+            /**
+             * The class name of the event.
+             */
+            type?: string;
+            /**
+             * The event value object (preferred over data).
+             */
+            value?: {
+                [key: string]: unknown;
+            };
+            [key: string]: unknown | string | {
+                [key: string]: unknown;
+            } | undefined;
+        };
         /**
          * Optional target step name. If not provided, event is sent to all steps.
          */
@@ -354,7 +393,18 @@ export type GetHealthResponse = GetHealthResponses[keyof GetHealthResponses];
 export type GetHandlersData = {
     body?: never;
     path?: never;
-    query?: never;
+    query?: {
+        /**
+         * Filter by handler status. Can be provided multiple times (e.g., status=running&status=failed)
+         *
+         */
+        status?: Array<'running' | 'completed' | 'failed' | 'cancelled'>;
+        /**
+         * Filter by workflow name. Can be provided multiple times (e.g., workflow_name=test&workflow_name=other)
+         *
+         */
+        workflow_name?: Array<string>;
+    };
     url: '/handlers';
 };
 
@@ -366,6 +416,44 @@ export type GetHandlersResponses = {
 };
 
 export type GetHandlersResponse = GetHandlersResponses[keyof GetHandlersResponses];
+
+export type GetHandlersByHandlerIdData = {
+    body?: never;
+    path: {
+        /**
+         * Workflow run identifier returned from the no-wait run endpoint.
+         */
+        handler_id: string;
+    };
+    query?: never;
+    url: '/handlers/{handler_id}';
+};
+
+export type GetHandlersByHandlerIdErrors = {
+    /**
+     * Handler not found
+     */
+    404: unknown;
+    /**
+     * Error computing result
+     */
+    500: string;
+};
+
+export type GetHandlersByHandlerIdError = GetHandlersByHandlerIdErrors[keyof GetHandlersByHandlerIdErrors];
+
+export type GetHandlersByHandlerIdResponses = {
+    /**
+     * Result is available
+     */
+    200: Handler;
+    /**
+     * Result not ready yet
+     */
+    202: Handler;
+};
+
+export type GetHandlersByHandlerIdResponse = GetHandlersByHandlerIdResponses[keyof GetHandlersByHandlerIdResponses];
 
 export type PostHandlersByHandlerIdCancelData = {
     body?: never;

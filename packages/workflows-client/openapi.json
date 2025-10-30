@@ -2,10 +2,34 @@
   "openapi": "3.0.0",
   "info": {
     "title": "Workflows API",
-    "version": "2.8.3"
+    "version": "2.10.0"
   },
   "components": {
     "schemas": {
+      "EventEnvelopeWithMetadata": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "object"
+          },
+          "types": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "type": {
+            "type": "string"
+          },
+          "qualified_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "value",
+          "type"
+        ]
+      },
       "Handler": {
         "type": "object",
         "properties": {
@@ -47,7 +71,15 @@
             "nullable": true
           },
           "result": {
-            "description": "Workflow result value"
+            "description": "Workflow result value",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/EventEnvelopeWithMetadata"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -284,8 +316,8 @@
     },
     "/results/{handler_id}": {
       "get": {
-        "summary": "Get workflow result",
-        "description": "Returns the final result of an asynchronously started workflow, if available",
+        "summary": "Get workflow result (deprecated)",
+        "description": "Deprecated. Use GET /handlers/{handler_id} instead. Returns the final result of an asynchronously started workflow, if available.\n",
         "parameters": [
           {
             "in": "path",
@@ -297,13 +329,14 @@
             "description": "Workflow run identifier returned from the no-wait run endpoint."
           }
         ],
+        "deprecated": true,
         "responses": {
           "200": {
             "description": "Result is available",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Handler"
+                  "type": "object"
                 }
               }
             }
@@ -313,7 +346,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Handler"
+                  "type": "object"
                 }
               }
             }
@@ -337,7 +370,7 @@
     "/events/{handler_id}": {
       "get": {
         "summary": "Stream workflow events",
-        "description": "Streams events produced by a workflow execution. Events are emitted as\nnewline-delimited JSON by default, or as Server-Sent Events when `sse=true`.\nEvent data is returned as an envelope that preserves backward-compatible fields\nand adds metadata for type-safety on the client:\n{\n  \"__is_pydantic\": true,\n  \"value\": <pydantic serialized value>,\n  \"qualified_name\": <python path to pydantic class>,  # deprecated, prefer `mro`\n  \"mro\": [<qualified class names from most to least specific>],\n  \"origin\": \"builtin\" | \"user\"\n}\n\nEvent queue is mutable. Elements are added to the queue by the workflow handler, and removed by any consumer of the queue.\nThe queue is protected by a lock that is acquired by the consumer, so only one consumer of the queue at a time is allowed.\n",
+        "description": "Streams events produced by a workflow execution. Events are emitted as\nnewline-delimited JSON by default, or as Server-Sent Events when `sse=true`.\nEvent data is returned as an envelope that preserves backward-compatible fields\nand adds metadata for type-safety on the client:\n{\n  \"value\": <pydantic serialized value>,\n  \"types\": [<class names from MRO excluding the event class and base Event>],\n  \"type\": <class name>,\n  \"qualified_name\": <python module path + class name>,\n}\n\nEvent queue is mutable. Elements are added to the queue by the workflow handler, and removed by any consumer of the queue.\nThe queue is protected by a lock that is acquired by the consumer, so only one consumer of the queue at a time is allowed.\n",
         "parameters": [
           {
             "in": "path",
@@ -377,6 +410,16 @@
               "default": 1
             },
             "description": "Timeout for acquiring the lock to iterate over the events."
+          },
+          {
+            "in": "query",
+            "name": "include_qualified_name",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true
+            },
+            "description": "If true, include the qualified name of the event in the response body."
           }
         ],
         "responses": {
@@ -392,6 +435,17 @@
                       "type": "object",
                       "description": "The event value."
                     },
+                    "type": {
+                      "type": "string",
+                      "description": "The class name of the event."
+                    },
+                    "types": {
+                      "type": "array",
+                      "description": "Superclass names from MRO (excluding the event class and base Event).",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
                     "qualified_name": {
                       "type": "string",
                       "description": "The qualified name of the event."
@@ -399,7 +453,7 @@
                   },
                   "required": [
                     "value",
-                    "qualified_name"
+                    "type"
                   ]
                 }
               }
@@ -432,14 +486,30 @@
                 "type": "object",
                 "properties": {
                   "event": {
-                    "type": "string",
-                    "description": "Serialized event in JSON format.",
-                    "examples": {
-                      "type": "event_name",
-                      "data": {
-                        "key": "value"
+                    "description": "Serialized event. Accepts object or JSON-encoded string for backward compatibility.",
+                    "oneOf": [
+                      {
+                        "type": "string",
+                        "description": "JSON string of the event envelope or value.",
+                        "examples": [
+                          "{\"type\": \"ExternalEvent\", \"value\": {\"response\": \"hi\"}}"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "description": "The class name of the event."
+                          },
+                          "value": {
+                            "type": "object",
+                            "description": "The event value object (preferred over data)."
+                          }
+                        },
+                        "additionalProperties": true
                       }
-                    }
+                    ]
                   },
                   "step": {
                     "type": "string",
@@ -517,7 +587,43 @@
     "/handlers": {
       "get": {
         "summary": "Get handlers",
-        "description": "Returns all workflow handlers.",
+        "description": "Returns workflow handlers, optionally filtered by query parameters.",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "running",
+                  "completed",
+                  "failed",
+                  "cancelled"
+                ]
+              }
+            },
+            "style": "form",
+            "explode": true,
+            "description": "Filter by handler status. Can be provided multiple times (e.g., status=running&status=failed)\n"
+          },
+          {
+            "in": "query",
+            "name": "workflow_name",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "style": "form",
+            "explode": true,
+            "description": "Filter by workflow name. Can be provided multiple times (e.g., workflow_name=test&workflow_name=other)\n"
+          }
+        ],
         "responses": {
           "200": {
             "description": "List of handlers",
@@ -525,6 +631,58 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HandlersList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/handlers/{handler_id}": {
+      "get": {
+        "summary": "Get workflow handler",
+        "description": "Returns the final result of an asynchronously started workflow, if available",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "handler_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow run identifier returned from the no-wait run endpoint."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Result is available",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Handler"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Result not ready yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Handler"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Handler not found"
+          },
+          "500": {
+            "description": "Error computing result",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
                 }
               }
             }
