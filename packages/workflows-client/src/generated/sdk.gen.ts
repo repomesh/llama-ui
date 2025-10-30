@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { GetEventsByHandlerIdData, GetEventsByHandlerIdErrors, GetEventsByHandlerIdResponses, GetHandlersData, GetHandlersResponses, GetHealthData, GetHealthResponses, GetResultsByHandlerIdData, GetResultsByHandlerIdErrors, GetResultsByHandlerIdResponses, GetWorkflowsByNameEventsData, GetWorkflowsByNameEventsResponses, GetWorkflowsByNameRepresentationData, GetWorkflowsByNameRepresentationErrors, GetWorkflowsByNameRepresentationResponses, GetWorkflowsByNameSchemaData, GetWorkflowsByNameSchemaErrors, GetWorkflowsByNameSchemaResponses, GetWorkflowsData, GetWorkflowsResponses, PostEventsByHandlerIdData, PostEventsByHandlerIdErrors, PostEventsByHandlerIdResponses, PostHandlersByHandlerIdCancelData, PostHandlersByHandlerIdCancelErrors, PostHandlersByHandlerIdCancelResponses, PostWorkflowsByNameRunData, PostWorkflowsByNameRunErrors, PostWorkflowsByNameRunNowaitData, PostWorkflowsByNameRunNowaitErrors, PostWorkflowsByNameRunNowaitResponses, PostWorkflowsByNameRunResponses } from './types.gen';
+import type { GetEventsByHandlerIdData, GetEventsByHandlerIdErrors, GetEventsByHandlerIdResponses, GetHandlersByHandlerIdData, GetHandlersByHandlerIdErrors, GetHandlersByHandlerIdResponses, GetHandlersData, GetHandlersResponses, GetHealthData, GetHealthResponses, GetResultsByHandlerIdData, GetResultsByHandlerIdErrors, GetResultsByHandlerIdResponses, GetWorkflowsByNameEventsData, GetWorkflowsByNameEventsResponses, GetWorkflowsByNameRepresentationData, GetWorkflowsByNameRepresentationErrors, GetWorkflowsByNameRepresentationResponses, GetWorkflowsByNameSchemaData, GetWorkflowsByNameSchemaErrors, GetWorkflowsByNameSchemaResponses, GetWorkflowsData, GetWorkflowsResponses, PostEventsByHandlerIdData, PostEventsByHandlerIdErrors, PostEventsByHandlerIdResponses, PostHandlersByHandlerIdCancelData, PostHandlersByHandlerIdCancelErrors, PostHandlersByHandlerIdCancelResponses, PostWorkflowsByNameRunData, PostWorkflowsByNameRunErrors, PostWorkflowsByNameRunNowaitData, PostWorkflowsByNameRunNowaitErrors, PostWorkflowsByNameRunNowaitResponses, PostWorkflowsByNameRunResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -81,9 +81,12 @@ export const getWorkflowsByNameSchema = <ThrowOnError extends boolean = false>(o
 };
 
 /**
- * Get workflow result
+ * Get workflow result (deprecated)
  *
- * Returns the final result of an asynchronously started workflow, if available
+ * Deprecated. Use GET /handlers/{handler_id} instead. Returns the final result of an asynchronously started workflow, if available.
+ *
+ *
+ * @deprecated
  */
 export const getResultsByHandlerId = <ThrowOnError extends boolean = false>(options: Options<GetResultsByHandlerIdData, ThrowOnError>) => {
     return (options.client ?? client).get<GetResultsByHandlerIdResponses, GetResultsByHandlerIdErrors, ThrowOnError>({
@@ -148,11 +151,23 @@ export const getHealth = <ThrowOnError extends boolean = false>(options?: Option
 /**
  * Get handlers
  *
- * Returns all workflow handlers.
+ * Returns workflow handlers, optionally filtered by query parameters.
  */
 export const getHandlers = <ThrowOnError extends boolean = false>(options?: Options<GetHandlersData, ThrowOnError>) => {
     return (options?.client ?? client).get<GetHandlersResponses, unknown, ThrowOnError>({
         url: '/handlers',
+        ...options
+    });
+};
+
+/**
+ * Get workflow handler
+ *
+ * Returns the final result of an asynchronously started workflow, if available
+ */
+export const getHandlersByHandlerId = <ThrowOnError extends boolean = false>(options: Options<GetHandlersByHandlerIdData, ThrowOnError>) => {
+    return (options.client ?? client).get<GetHandlersByHandlerIdResponses, GetHandlersByHandlerIdErrors, ThrowOnError>({
+        url: '/handlers/{handler_id}',
         ...options
     });
 };

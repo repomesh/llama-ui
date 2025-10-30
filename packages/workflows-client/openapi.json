@@ -2,10 +2,34 @@
   "openapi": "3.0.0",
   "info": {
     "title": "Workflows API",
-    "version": "2.9.0"
+    "version": "2.10.0"
   },
   "components": {
     "schemas": {
+      "EventEnvelopeWithMetadata": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "object"
+          },
+          "types": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "type": {
+            "type": "string"
+          },
+          "qualified_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "value",
+          "type"
+        ]
+      },
       "Handler": {
         "type": "object",
         "properties": {
@@ -47,7 +71,15 @@
             "nullable": true
           },
           "result": {
-            "description": "Workflow result value"
+            "description": "Workflow result value",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/EventEnvelopeWithMetadata"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -284,8 +316,8 @@
     },
     "/results/{handler_id}": {
       "get": {
-        "summary": "Get workflow result",
-        "description": "Returns the final result of an asynchronously started workflow, if available",
+        "summary": "Get workflow result (deprecated)",
+        "description": "Deprecated. Use GET /handlers/{handler_id} instead. Returns the final result of an asynchronously started workflow, if available.\n",
         "parameters": [
           {
             "in": "path",
@@ -297,13 +329,14 @@
             "description": "Workflow run identifier returned from the no-wait run endpoint."
           }
         ],
+        "deprecated": true,
         "responses": {
           "200": {
             "description": "Result is available",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Handler"
+                  "type": "object"
                 }
               }
             }
@@ -313,7 +346,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Handler"
+                  "type": "object"
                 }
               }
             }
@@ -554,7 +587,43 @@
     "/handlers": {
       "get": {
         "summary": "Get handlers",
-        "description": "Returns all workflow handlers.",
+        "description": "Returns workflow handlers, optionally filtered by query parameters.",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "running",
+                  "completed",
+                  "failed",
+                  "cancelled"
+                ]
+              }
+            },
+            "style": "form",
+            "explode": true,
+            "description": "Filter by handler status. Can be provided multiple times (e.g., status=running&status=failed)\n"
+          },
+          {
+            "in": "query",
+            "name": "workflow_name",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "style": "form",
+            "explode": true,
+            "description": "Filter by workflow name. Can be provided multiple times (e.g., workflow_name=test&workflow_name=other)\n"
+          }
+        ],
         "responses": {
           "200": {
             "description": "List of handlers",
@@ -562,6 +631,58 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HandlersList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/handlers/{handler_id}": {
+      "get": {
+        "summary": "Get workflow handler",
+        "description": "Returns the final result of an asynchronously started workflow, if available",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "handler_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow run identifier returned from the no-wait run endpoint."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Result is available",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Handler"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Result not ready yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Handler"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Handler not found"
+          },
+          "500": {
+            "description": "Error computing result",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
                 }
               }
             }
