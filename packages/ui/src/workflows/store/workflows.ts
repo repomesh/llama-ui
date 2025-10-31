@@ -1,30 +1,28 @@
 import { Client, getWorkflows } from "@llamaindex/workflows-client";
-import { Workflow } from "./workflow";
 import { proxy } from "valtio";
-import { Handlers } from "./handlers";
+import { WorkflowState } from "./workflow";
 
-export class Workflows {
-  workflows: Record<string, Workflow>;
+export interface WorkflowsState {
+  workflows: Record<string, Omit<WorkflowState, "graph">>;
+}
 
-  constructor(
-    public readonly client: Client,
-    public readonly handlers: Handlers
-  ) {
-    this.workflows = {};
+export function createState(): WorkflowsState {
+  return proxy({ workflows: {} });
+}
+
+export function createActions(state: WorkflowsState, client: Client) {
+  return {
+    async sync() {
+      const resp = await getWorkflows({
+        client: client,
+      });
+      const allWorkflows = resp.data?.workflows ?? [];
+      allWorkflows.forEach((name) => {
+        state.workflows[name] = { name };
+      });
+    },
+    setWorkflow(workflow: Omit<WorkflowState, "graph">) {
+      state.workflows[workflow.name] = workflow;
+    },
   }
-
-  fetch = async () => {
-    const resp = await getWorkflows({
-      client: this.client,
-    });
-    const allWorkflows = resp.data?.workflows ?? [];
-
-    this.workflows = Object.fromEntries(
-      allWorkflows.map((name) => [
-        name,
-        proxy(new Workflow(this.client, name, this.handlers)),
-      ])
-    );
-    return this.workflows;
-  };
 }

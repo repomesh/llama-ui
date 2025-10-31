@@ -1,28 +1,38 @@
 import { Client, getHandlers } from "@llamaindex/workflows-client";
+import { HandlerState } from "./handler";
 import { proxy } from "valtio";
-import { Handler } from "./handler";
+import { StopEvent } from "./workflow-event";
 
-export class Handlers {
-  handlers: Record<string, Handler>;
+export interface HandlersState {
+  handlers: Record<string, HandlerState>;
+}
 
-  constructor(public readonly client: Client) {
-    this.handlers = {};
+export const createState = (): HandlersState => {
+  return proxy({ handlers: {} });
+}
+
+export function createActions(state: HandlersState, client: Client) {
+  return {
+    async sync() {
+      const resp = await getHandlers({
+        client: client,
+      });
+      const allHandlers = resp.data?.handlers ?? [];
+      allHandlers.forEach((h) => {
+        state.handlers[h.handler_id] = {
+          handler_id: h.handler_id,
+          workflow_name: h.workflow_name,
+          status: h.status,
+          started_at: h.started_at,
+          updated_at: h.updated_at ? new Date(h.updated_at) : undefined,
+          completed_at: h.completed_at ? new Date(h.completed_at) : undefined,
+          error: h.error,
+          result: h.result ? StopEvent.fromRawEvent(h.result) as StopEvent : undefined,
+        };
+      });
+    },
+    setHandler(handler: HandlerState) {
+      state.handlers[handler.handler_id] = handler;
+    },
   }
-
-  fetch = async () => {
-    const resp = await getHandlers({
-      client: this.client,
-    });
-    const allHandlers = resp.data?.handlers ?? [];
-
-    const handlers = allHandlers.map((handler) =>
-      proxy(new Handler(handler, this.client))
-    );
-    this.handlers = Object.fromEntries(handlers.map((h) => [h.handlerId, h]));
-    return this.handlers;
-  };
-
-  _addHandler = (handler: Handler) => {
-    this.handlers[handler.handlerId] = handler;
-  };
 }

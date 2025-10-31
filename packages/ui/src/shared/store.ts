@@ -10,3 +10,7 @@ export function getOrCreate<T>(key: string, factory: () => T): T {
   }
   return globalStoreCache.get(key) as T;
 }
+
+export function getStore<T>(key: string): T | undefined {
+  return globalStoreCache.get(key) as T;
+}

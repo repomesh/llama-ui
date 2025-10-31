@@ -4,20 +4,21 @@
  */
 
 import { useHandlers } from "../hooks";
-import type { Handler } from "../store/handler";
 import { Button } from "@/base/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/base/card";
 import { Badge } from "@/base/badge";
+import { RunStatus } from "@/src";
+import { HandlerState } from "../store/handler";
 
 export interface HandlerListProps {
-  onSelectHandler?: (handler: Handler) => void;
+  onSelectHandler?: (handlerId: string) => void;
 }
 
 export function HandlerList({ onSelectHandler }: HandlerListProps) {
-  const { handlers, fetch } = useHandlers();
-  const handlerList = Object.values(handlers);
+  const { state, sync } = useHandlers();
+  const handlerList = Object.values(state.handlers);
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: RunStatus) => {
     switch (status) {
       case "running":
         return "bg-blue-500";
@@ -36,7 +37,7 @@ export function HandlerList({ onSelectHandler }: HandlerListProps) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Workflow Handlers</h2>
-        <Button onClick={() => fetch()} variant="outline">
+        <Button onClick={() => sync()} variant="outline">
           Refresh
         </Button>
       </div>
@@ -51,16 +52,16 @@ export function HandlerList({ onSelectHandler }: HandlerListProps) {
         </Card>
       ) : (
         <div className="space-y-2">
-          {handlerList.map((handler) => (
+          {handlerList.map((handler: HandlerState) => (
             <Card
-              key={handler.handlerId}
+              key={handler.handler_id}
               className="cursor-pointer hover:bg-accent transition-colors"
-              onClick={() => onSelectHandler?.(handler)}
+              onClick={() => onSelectHandler?.(handler.handler_id)}
             >
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-medium">
-                    {handler.workflowName}
+                    {handler.workflow_name}
                   </CardTitle>
                   <Badge className={getStatusColor(handler.status)}>
                     {handler.status}
@@ -71,16 +72,16 @@ export function HandlerList({ onSelectHandler }: HandlerListProps) {
                 <div className="text-xs text-muted-foreground space-y-1">
                   <div>
                     <span className="font-medium">ID:</span>{" "}
-                    {handler.handlerId.slice(0, 8)}...
+                    {handler.handler_id.slice(0, 8)}...
                   </div>
                   <div>
                     <span className="font-medium">Started:</span>{" "}
-                    {handler.startedAt.toLocaleString()}
+                    {handler.started_at.toLocaleString()}
                   </div>
-                  {handler.completedAt && (
+                  {handler.completed_at && (
                     <div>
                       <span className="font-medium">Completed:</span>{" "}
-                      {handler.completedAt.toLocaleString()}
+                      {handler.completed_at?.toLocaleString()}
                     </div>
                   )}
                 </div>

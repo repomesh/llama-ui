@@ -1,44 +1,49 @@
 import { useWorkflowsClient } from "@/src/lib/api-provider";
-import { Workflow } from "../store/workflow";
-import { Handler } from "../store/handler";
-import { Handlers } from "../store/handlers";
-import { Workflows } from "../store/workflows";
+import { useMemo } from "react";
+import { useSnapshot } from "valtio";
+import { createActions, HandlersState, createState as createHandlersState } from "../store/handlers";
 import { getOrCreate } from "@/src/shared/store";
-import { proxy, useSnapshot } from "valtio";
+import { createActions as createWorkflowsActions, createState as createWorkflowsState, WorkflowsState } from "../store/workflows";
+import { createActions as createWorkflowActions, createState as createWorkflowState, WorkflowState } from "../store/workflow";
+import { createActions as createHandlerActions, createState as createHandlerState, HandlerState } from "../store/handler";
 
-export function useHandlers(): Handlers {
+
+export function useHandlers() {
   const client = useWorkflowsClient();
-  const store = getOrCreate<Handlers>("handlers", () =>
-    proxy<Handlers>(new Handlers(client))
-  );
-  return useSnapshot(store);
-}
-
-export function useWorkflows(): Workflows {
-  const client = useWorkflowsClient();
-  const handlers = useHandlers();
-  const store = getOrCreate<Workflows>("workflows", () =>
-    proxy<Workflows>(new Workflows(client, handlers))
-  );
-  return useSnapshot(store);
-}
-
-export function useWorkflow(name: string): Workflow {
-  const client = useWorkflowsClient();
-  const handlers = useHandlers();
-  const store = getOrCreate<Workflow>("workflow:" + name, () =>
-    proxy<Workflow>(new Workflow(client, name, handlers))
-  );
-  return useSnapshot(store);
-}
-
-export function useHandler(handlerId: string): Handler {
-  const handlers = useHandlers();
-  const handler = handlers.handlers[handlerId];
-  if (!handler) {
-    throw new Error(
-      `Handler ${handlerId} not found, make sure to call useHandlers() first`
-    );
+  const state = getOrCreate<HandlersState>("handlers", () => createHandlersState());
+  const actions = useMemo(() => createActions(state, client), [state, client]);
+  return {
+    state: useSnapshot(state),
+    ...actions,
   }
-  return useSnapshot(handler);
+}
+
+export function useWorkflows() {
+  const client = useWorkflowsClient();
+  const state = getOrCreate<WorkflowsState>("workflows", () => createWorkflowsState());
+  const actions = useMemo(() => createWorkflowsActions(state, client), [state, client]);
+  return {
+    state: useSnapshot(state),
+    ...actions,
+  }
+}
+
+export function useWorkflow(name: string) {
+  const client = useWorkflowsClient();
+  const state = getOrCreate<WorkflowState>(`workflow:${name}`, () => createWorkflowState(name));
+  const actions = useMemo(() => createWorkflowActions(state, client), [state, client]);
+  return {
+    state: useSnapshot(state),
+    ...actions,
+  }
+}
+
+export function useHandler(handlerId: string) {
+  const client = useWorkflowsClient();
+  const state = getOrCreate<HandlerState>(`handler:${handlerId}`, () => createHandlerState());
+  const actions = useMemo(() => createHandlerActions(state, client), [state, client]);
+  return {
+    state: useSnapshot(state),
+    ...actions,
+  }
 }

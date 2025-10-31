@@ -1,4 +1,5 @@
-import { JSONValue, RawEvent } from "../types";
+import { EventEnvelopeWithMetadata } from "@llamaindex/workflows-client";
+import { JSONValue } from "../types";
 
 export enum WorkflowEventType {
   StartEvent = "StartEvent",
@@ -29,21 +30,21 @@ export const builtInEventTypes: string[] = [
 export class WorkflowEvent {
   type: string;
   types?: string[] | undefined;
-  data?: JSONValue | undefined;
+  data?: Record<string, unknown> | undefined;
   timestamp: Date;
 
-  constructor(type: string, data: JSONValue, types?: string[]) {
+  constructor(type: string, data: Record<string, unknown>, types?: string[]) {
     this.type = type;
     this.data = data;
     this.timestamp = new Date();
     this.types = types;
   }
 
-  static fromRawEvent(event: RawEvent): WorkflowEvent {
+  static fromRawEvent(event: EventEnvelopeWithMetadata) {
     if (isStartEvent(event)) {
       return new StartEvent(
         event.type,
-        event.value as { input: JSONValue },
+        event.value as Record<string, unknown>,
         event.types
       );
     }
@@ -87,22 +88,13 @@ export class WorkflowEvent {
     return new WorkflowEvent(event.type, event.value, event.types);
   }
 
-  toRawEvent(): RawEvent {
+  toRawEvent(): EventEnvelopeWithMetadata {
     return {
-      __is_pydantic: true,
       value: this.data ?? {},
       qualified_name: this.type,
-      types: this.types || [],
+      types: this.types as string[] | undefined ?? [],
       type: this.type,
-    };
-  }
-}
-
-export class StartEvent extends WorkflowEvent {
-  declare data: { input: JSONValue };
-
-  constructor(type: string, data: { input: JSONValue }, types?: string[]) {
-    super(type, data, types);
+    } as EventEnvelopeWithMetadata;
   }
 }
 
@@ -138,32 +130,38 @@ export class ChatDeltaEvent extends WorkflowEvent {
   }
 }
 
+export class StartEvent extends WorkflowEvent {
+  constructor(type: string, data: Record<string, unknown>, types?: string[]) {
+    super(type, data, types);
+  }
+}
+
 export class InternalDispatchEvent extends WorkflowEvent {
-  constructor(type: string, data: JSONValue, types?: string[]) {
+  constructor(type: string, data: Record<string, unknown>, types?: string[]) {
     super(type, data, types);
   }
 }
 
 export class EventsQueueChanged extends WorkflowEvent {
-  constructor(type: string, data: JSONValue, types?: string[]) {
+  constructor(type: string, data: Record<string, unknown>, types?: string[]) {
     super(type, data, types);
   }
 }
 
 export class StepStateChanged extends WorkflowEvent {
-  constructor(type: string, data: JSONValue, types?: string[]) {
+  constructor(type: string, data: Record<string, unknown>, types?: string[]) {
     super(type, data, types);
   }
 }
 
 /**
  * All isXXXEvent functions are used to determine if an event is of a specific type
- * They will take both RawEvent and WorkflowEvent as input for convenience
+ * They will take both EventEnvelopeWithMetadata and WorkflowEvent as input for convenience
  * When used with WorkflowEvent, they act as type guards for TypeScript narrowing
  */
 export function isStartEvent(event: WorkflowEvent): event is StartEvent;
-export function isStartEvent(event: RawEvent): boolean;
-export function isStartEvent(event: RawEvent | WorkflowEvent): boolean {
+export function isStartEvent(event: EventEnvelopeWithMetadata): boolean;
+export function isStartEvent(event: EventEnvelopeWithMetadata | WorkflowEvent): boolean {
   if (event instanceof WorkflowEvent) {
     return event instanceof StartEvent;
   }
@@ -174,8 +172,8 @@ export function isStartEvent(event: RawEvent | WorkflowEvent): boolean {
 }
 
 export function isStopEvent(event: WorkflowEvent): event is StopEvent;
-export function isStopEvent(event: RawEvent): boolean;
-export function isStopEvent(event: RawEvent | WorkflowEvent): boolean {
+export function isStopEvent(event: EventEnvelopeWithMetadata): boolean;
+export function isStopEvent(event: EventEnvelopeWithMetadata | WorkflowEvent): boolean {
   if (event instanceof WorkflowEvent) {
     return event instanceof StopEvent;
   }
@@ -188,8 +186,8 @@ export function isStopEvent(event: RawEvent | WorkflowEvent): boolean {
 export function isInputRequiredEvent(
   event: WorkflowEvent
 ): event is InputRequiredEvent;
-export function isInputRequiredEvent(event: RawEvent): boolean;
-export function isInputRequiredEvent(event: RawEvent | WorkflowEvent): boolean {
+export function isInputRequiredEvent(event: EventEnvelopeWithMetadata): boolean;
+export function isInputRequiredEvent(event: EventEnvelopeWithMetadata | WorkflowEvent): boolean {
   if (event instanceof WorkflowEvent) {
     return event instanceof InputRequiredEvent;
   }
@@ -202,8 +200,8 @@ export function isInputRequiredEvent(event: RawEvent | WorkflowEvent): boolean {
 export function isHumanResponseEvent(
   event: WorkflowEvent
 ): event is HumanResponseEvent;
-export function isHumanResponseEvent(event: RawEvent): boolean;
-export function isHumanResponseEvent(event: RawEvent | WorkflowEvent): boolean {
+export function isHumanResponseEvent(event: EventEnvelopeWithMetadata): boolean;
+export function isHumanResponseEvent(event: EventEnvelopeWithMetadata | WorkflowEvent): boolean {
   if (event instanceof WorkflowEvent) {
     return event instanceof HumanResponseEvent;
   }
@@ -214,8 +212,8 @@ export function isHumanResponseEvent(event: RawEvent | WorkflowEvent): boolean {
 }
 
 export function isChatDeltaEvent(event: WorkflowEvent): event is ChatDeltaEvent;
-export function isChatDeltaEvent(event: RawEvent): boolean;
-export function isChatDeltaEvent(event: RawEvent | WorkflowEvent): boolean {
+export function isChatDeltaEvent(event: EventEnvelopeWithMetadata): boolean;
+export function isChatDeltaEvent(event: EventEnvelopeWithMetadata | WorkflowEvent): boolean {
   if (event instanceof WorkflowEvent) {
     return event instanceof ChatDeltaEvent;
   }
@@ -228,9 +226,9 @@ export function isChatDeltaEvent(event: RawEvent | WorkflowEvent): boolean {
 export function isInternalDispatchEvent(
   event: WorkflowEvent
 ): event is InternalDispatchEvent;
-export function isInternalDispatchEvent(event: RawEvent): boolean;
+export function isInternalDispatchEvent(event: EventEnvelopeWithMetadata): boolean;
 export function isInternalDispatchEvent(
-  event: RawEvent | WorkflowEvent
+  event: EventEnvelopeWithMetadata | WorkflowEvent
 ): boolean {
   if (event instanceof WorkflowEvent) {
     return event instanceof InternalDispatchEvent;
@@ -246,8 +244,8 @@ export function isInternalDispatchEvent(
 export function isStepStateChanged(
   event: WorkflowEvent
 ): event is StepStateChanged;
-export function isStepStateChanged(event: RawEvent): boolean;
-export function isStepStateChanged(event: RawEvent | WorkflowEvent): boolean {
+export function isStepStateChanged(event: EventEnvelopeWithMetadata): boolean;
+export function isStepStateChanged(event: EventEnvelopeWithMetadata | WorkflowEvent): boolean {
   if (event instanceof WorkflowEvent) {
     return event instanceof StepStateChanged;
   }
@@ -260,8 +258,8 @@ export function isStepStateChanged(event: RawEvent | WorkflowEvent): boolean {
 export function isEventsQueueChanged(
   event: WorkflowEvent
 ): event is EventsQueueChanged;
-export function isEventsQueueChanged(event: RawEvent): boolean;
-export function isEventsQueueChanged(event: RawEvent | WorkflowEvent): boolean {
+export function isEventsQueueChanged(event: EventEnvelopeWithMetadata): boolean;
+export function isEventsQueueChanged(event: EventEnvelopeWithMetadata | WorkflowEvent): boolean {
   if (event instanceof WorkflowEvent) {
     return event instanceof EventsQueueChanged;
   }

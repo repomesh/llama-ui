@@ -1,49 +1,50 @@
 import {
   Client,
   postWorkflowsByNameRunNowait,
+  getWorkflowsByNameRepresentation,
 } from "@llamaindex/workflows-client";
 import { proxy } from "valtio";
-import { Handler } from "./handler";
+import { createState as createHandlerState } from "./handler";
 import { JSONValue } from "../types";
-import type { Handlers } from "./handlers";
 
-export class Workflow {
-  // TODO: add graph data
-  graph: unknown | null = null;
+export interface WorkflowState {
+  name: string;
+  // TODO: add graph type
+  graph: unknown | null;
+}
 
-  constructor(
-    public readonly client: Client,
-    public readonly name: string,
-    private readonly handlersStore: Handlers
-  ) {}
+export function createState(name: string): WorkflowState {
+  return proxy({
+    name,
+    graph: null,
+  });
+}
 
-  get handlers(): Record<string, Handler> {
-    const allHandlers = this.handlersStore.handlers;
-    return Object.fromEntries(
-      Object.entries(allHandlers).filter(
-        ([_, handler]) => handler.workflowName === this.name
-      )
-    );
-  }
+export function createActions(state: WorkflowState, client: Client) {
+  return {
+    async sync() {
+      const data = await getWorkflowsByNameRepresentation({
+        client: client,
+        path: { name: state.name },
+      });
+      state.graph = data.data?.graph ?? null;
+    },
 
-  createHandler = async (workflowName: string, input: JSONValue, handlerId?: string) => {
-    const data = await postWorkflowsByNameRunNowait({
-      client: this.client,
-      path: { name: workflowName },
-      body: {
-        start_event: input as { [key: string]: unknown } | undefined,
-        handler_id: handlerId,
-      },
-    });
-
-    if (!data.data) {
-      throw new Error("Handler creation failed");
+    async createHandler(input: JSONValue, handlerId?: string) {
+      const data = await postWorkflowsByNameRunNowait({
+        client: client,
+        path: { name: state.name },
+        body: {
+          start_event: input as { [key: string]: unknown } | undefined,
+          handler_id: handlerId,
+        },
+      });
+  
+      if (!data.data) {
+        throw new Error("Handler creation failed");
+      }
+  
+      return createHandlerState(data.data);
     }
-
-    const handler = proxy(new Handler(data.data, this.client));
-
-    // Store in global handlers collection
-    this.handlersStore._addHandler(handler);
-    return handler;
-  };
+  }
 }
