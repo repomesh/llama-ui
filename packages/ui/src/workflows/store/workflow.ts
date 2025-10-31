@@ -39,12 +39,12 @@ export function createActions(state: WorkflowState, client: Client) {
           handler_id: handlerId,
         },
       });
-  
+
       if (!data.data) {
         throw new Error("Handler creation failed");
       }
-  
+
       return createHandlerState(data.data);
-    }
-  }
+    },
+  };
 }

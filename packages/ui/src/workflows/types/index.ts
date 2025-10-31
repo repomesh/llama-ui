@@ -8,7 +8,12 @@ export type JSONValue =
   | { [key: string]: JSONValue }
   | Array<JSONValue>;
 
-export type RunStatus = "running" | "completed" | "failed" | "cancelled" | "not_started";
+export type RunStatus =
+  | "running"
+  | "completed"
+  | "failed"
+  | "cancelled"
+  | "not_started";
 
 export interface WorkflowProgressState {
   current: number;

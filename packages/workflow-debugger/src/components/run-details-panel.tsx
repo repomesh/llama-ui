@@ -87,7 +87,10 @@ export function RunDetailsPanel({
           },
           onSuccess(allEvents) {
             setEvents(allEvents);
-            setFinalResult((allEvents[allEvents.length - 1] as StopEvent)?.data?.result ?? null);
+            setFinalResult(
+              (allEvents[allEvents.length - 1] as StopEvent)?.data?.result ??
+                null,
+            );
           },
           onError(error) {
             setFinalResultError(error.message);

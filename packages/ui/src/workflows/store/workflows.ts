@@ -24,5 +24,5 @@ export function createActions(state: WorkflowsState, client: Client) {
     setWorkflow(workflow: Omit<WorkflowState, "graph">) {
       state.workflows[workflow.name] = workflow;
     },
-  }
+  };
 }

@@ -1,4 +1,8 @@
-import { Client, getHandlers } from "@llamaindex/workflows-client";
+import {
+  Client,
+  EventEnvelopeWithMetadata,
+  getHandlers,
+} from "@llamaindex/workflows-client";
 import { HandlerState } from "./handler";
 import { proxy } from "valtio";
 import { StopEvent } from "./workflow-event";
@@ -9,7 +13,7 @@ export interface HandlersState {
 
 export const createState = (): HandlersState => {
   return proxy({ handlers: {} });
-}
+};
 
 export function createActions(state: HandlersState, client: Client) {
   return {
@@ -27,12 +31,16 @@ export function createActions(state: HandlersState, client: Client) {
           updated_at: h.updated_at ? new Date(h.updated_at) : undefined,
           completed_at: h.completed_at ? new Date(h.completed_at) : undefined,
           error: h.error,
-          result: h.result ? StopEvent.fromRawEvent(h.result) as StopEvent : undefined,
+          result: h.result
+            ? (StopEvent.fromRawEvent(
+                h.result as EventEnvelopeWithMetadata
+              ) as StopEvent)
+            : undefined,
         };
       });
     },
     setHandler(handler: HandlerState) {
       state.handlers[handler.handler_id] = handler;
     },
-  }
+  };
 }

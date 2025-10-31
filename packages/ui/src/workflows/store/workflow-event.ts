@@ -92,7 +92,7 @@ export class WorkflowEvent {
     return {
       value: this.data ?? {},
       qualified_name: this.type,
-      types: this.types as string[] | undefined ?? [],
+      types: (this.types as string[] | undefined) ?? [],
       type: this.type,
     } as EventEnvelopeWithMetadata;
   }
@@ -161,7 +161,9 @@ export class StepStateChanged extends WorkflowEvent {
  */
 export function isStartEvent(event: WorkflowEvent): event is StartEvent;
 export function isStartEvent(event: EventEnvelopeWithMetadata): boolean;
-export function isStartEvent(event: EventEnvelopeWithMetadata | WorkflowEvent): boolean {
+export function isStartEvent(
+  event: EventEnvelopeWithMetadata | WorkflowEvent
+): boolean {
   if (event instanceof WorkflowEvent) {
     return event instanceof StartEvent;
   }
@@ -173,7 +175,9 @@ export function isStartEvent(event: EventEnvelopeWithMetadata | WorkflowEvent): 
 
 export function isStopEvent(event: WorkflowEvent): event is StopEvent;
 export function isStopEvent(event: EventEnvelopeWithMetadata): boolean;
-export function isStopEvent(event: EventEnvelopeWithMetadata | WorkflowEvent): boolean {
+export function isStopEvent(
+  event: EventEnvelopeWithMetadata | WorkflowEvent
+): boolean {
   if (event instanceof WorkflowEvent) {
     return event instanceof StopEvent;
   }
@@ -187,7 +191,9 @@ export function isInputRequiredEvent(
   event: WorkflowEvent
 ): event is InputRequiredEvent;
 export function isInputRequiredEvent(event: EventEnvelopeWithMetadata): boolean;
-export function isInputRequiredEvent(event: EventEnvelopeWithMetadata | WorkflowEvent): boolean {
+export function isInputRequiredEvent(
+  event: EventEnvelopeWithMetadata | WorkflowEvent
+): boolean {
   if (event instanceof WorkflowEvent) {
     return event instanceof InputRequiredEvent;
   }
@@ -201,7 +207,9 @@ export function isHumanResponseEvent(
   event: WorkflowEvent
 ): event is HumanResponseEvent;
 export function isHumanResponseEvent(event: EventEnvelopeWithMetadata): boolean;
-export function isHumanResponseEvent(event: EventEnvelopeWithMetadata | WorkflowEvent): boolean {
+export function isHumanResponseEvent(
+  event: EventEnvelopeWithMetadata | WorkflowEvent
+): boolean {
   if (event instanceof WorkflowEvent) {
     return event instanceof HumanResponseEvent;
   }
@@ -213,7 +221,9 @@ export function isHumanResponseEvent(event: EventEnvelopeWithMetadata | Workflow
 
 export function isChatDeltaEvent(event: WorkflowEvent): event is ChatDeltaEvent;
 export function isChatDeltaEvent(event: EventEnvelopeWithMetadata): boolean;
-export function isChatDeltaEvent(event: EventEnvelopeWithMetadata | WorkflowEvent): boolean {
+export function isChatDeltaEvent(
+  event: EventEnvelopeWithMetadata | WorkflowEvent
+): boolean {
   if (event instanceof WorkflowEvent) {
     return event instanceof ChatDeltaEvent;
   }
@@ -226,7 +236,9 @@ export function isChatDeltaEvent(event: EventEnvelopeWithMetadata | WorkflowEven
 export function isInternalDispatchEvent(
   event: WorkflowEvent
 ): event is InternalDispatchEvent;
-export function isInternalDispatchEvent(event: EventEnvelopeWithMetadata): boolean;
+export function isInternalDispatchEvent(
+  event: EventEnvelopeWithMetadata
+): boolean;
 export function isInternalDispatchEvent(
   event: EventEnvelopeWithMetadata | WorkflowEvent
 ): boolean {
@@ -245,7 +257,9 @@ export function isStepStateChanged(
   event: WorkflowEvent
 ): event is StepStateChanged;
 export function isStepStateChanged(event: EventEnvelopeWithMetadata): boolean;
-export function isStepStateChanged(event: EventEnvelopeWithMetadata | WorkflowEvent): boolean {
+export function isStepStateChanged(
+  event: EventEnvelopeWithMetadata | WorkflowEvent
+): boolean {
   if (event instanceof WorkflowEvent) {
     return event instanceof StepStateChanged;
   }
@@ -259,7 +273,9 @@ export function isEventsQueueChanged(
   event: WorkflowEvent
 ): event is EventsQueueChanged;
 export function isEventsQueueChanged(event: EventEnvelopeWithMetadata): boolean;
-export function isEventsQueueChanged(event: EventEnvelopeWithMetadata | WorkflowEvent): boolean {
+export function isEventsQueueChanged(
+  event: EventEnvelopeWithMetadata | WorkflowEvent
+): boolean {
   if (event instanceof WorkflowEvent) {
     return event instanceof EventsQueueChanged;
   }

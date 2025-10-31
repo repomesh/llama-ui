@@ -66,7 +66,7 @@ export function WorkflowDebugger() {
   const [configPanelCollapsed, setConfigPanelCollapsed] = useState(false);
   const [isServerHealthy, setIsServerHealthy] = useState<boolean | null>(null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
-  
+
   const workflows = workflowsState.workflows;
   const workflowsClient = useWorkflowsClient();
 

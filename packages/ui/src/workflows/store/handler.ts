@@ -16,7 +16,11 @@ import { logger } from "@shared/logger";
 import { isStopEvent, StopEvent, WorkflowEvent } from "./workflow-event";
 import { proxy } from "valtio";
 
-export interface HandlerState extends Omit<RawHandler, "status" | "result" | "updated_at" | "completed_at"> {
+export interface HandlerState
+  extends Omit<
+    RawHandler,
+    "status" | "result" | "updated_at" | "completed_at"
+  > {
   status: RunStatus;
   updated_at?: Date;
   completed_at?: Date;
@@ -35,16 +39,26 @@ const emptyState: HandlerState = {
 };
 
 export const createState = (rawHandler?: RawHandler): HandlerState => {
-  const state = rawHandler ? {
-    handler_id: rawHandler.handler_id,
-    workflow_name: rawHandler.workflow_name,
-    status: rawHandler.status,
-    started_at: rawHandler.started_at,
-    updated_at: rawHandler.updated_at ? new Date(rawHandler.updated_at) : undefined,
-    completed_at: rawHandler.completed_at ? new Date(rawHandler.completed_at) : undefined,
-    error: rawHandler.error,
-    result: rawHandler.result ? StopEvent.fromRawEvent(rawHandler.result) as StopEvent : undefined,
-  } : emptyState;
+  const state = rawHandler
+    ? {
+        handler_id: rawHandler.handler_id,
+        workflow_name: rawHandler.workflow_name,
+        status: rawHandler.status,
+        started_at: rawHandler.started_at,
+        updated_at: rawHandler.updated_at
+          ? new Date(rawHandler.updated_at)
+          : undefined,
+        completed_at: rawHandler.completed_at
+          ? new Date(rawHandler.completed_at)
+          : undefined,
+        error: rawHandler.error,
+        result: rawHandler.result
+          ? (StopEvent.fromRawEvent(
+              rawHandler.result as EventEnvelopeWithMetadata
+            ) as StopEvent)
+          : undefined,
+      }
+    : emptyState;
 
   return proxy(state);
 };
@@ -61,7 +75,7 @@ export function createActions(state: HandlerState, client: Client) {
           step: step,
         },
       });
-  
+
       return data.data;
     },
     async sync(handlerId?: string) {
@@ -71,9 +85,17 @@ export function createActions(state: HandlerState, client: Client) {
       });
 
       Object.assign(state, data.data, {
-        updated_at: data.data?.updated_at ? new Date(data.data.updated_at) : undefined,
-        completed_at: data.data?.completed_at ? new Date(data.data.completed_at) : undefined,
-        result: data.data?.result ? StopEvent.fromRawEvent(data.data.result) as StopEvent : undefined,
+        updated_at: data.data?.updated_at
+          ? new Date(data.data.updated_at)
+          : undefined,
+        completed_at: data.data?.completed_at
+          ? new Date(data.data.completed_at)
+          : undefined,
+        result: data.data?.result
+          ? (StopEvent.fromRawEvent(
+              data.data.result as EventEnvelopeWithMetadata
+            ) as StopEvent)
+          : undefined,
       });
     },
     subscribeToEvents(
@@ -81,7 +103,7 @@ export function createActions(state: HandlerState, client: Client) {
       includeInternal = false
     ): StreamOperation<WorkflowEvent> {
       const streamKey = `handler:${state.handler_id}`;
-  
+
       // Convert callback to SharedStreamingManager subscriber
       // Be aware that all datetimes below are not synced with server, only client local state update
       const subscriber: StreamSubscriber<WorkflowEvent> = {
@@ -113,7 +135,7 @@ export function createActions(state: HandlerState, client: Client) {
           callbacks?.onComplete?.();
         },
       };
-  
+
       const canceler = async () => {
         await postHandlersByHandlerIdCancel({
           client: client,
@@ -122,7 +144,7 @@ export function createActions(state: HandlerState, client: Client) {
           },
         });
       };
-  
+
       // Use SharedStreamingManager to handle the streaming with deduplication
       const { promise, unsubscribe, disconnect, cancel } =
         workflowStreamingManager.subscribe(
@@ -138,14 +160,14 @@ export function createActions(state: HandlerState, client: Client) {
               },
               subscriber,
               actions,
-              state,
+              state
             );
           },
           canceler
         );
-  
+
       return { promise, unsubscribe, disconnect, cancel };
-    }
+    },
   };
   return actions;
 }
@@ -159,7 +181,7 @@ function streamByEventSource(
   },
   callbacks: StreamSubscriber<WorkflowEvent>,
   actions: ReturnType<typeof createActions>,
-  state: HandlerState,
+  state: HandlerState
 ) {
   return new Promise<WorkflowEvent[]>((resolve) => {
     const baseUrl = (params.client.getConfig().baseUrl ?? "").replace(
@@ -202,7 +224,9 @@ function streamByEventSource(
             callbacks.onCancel?.();
           } else {
             // This should never happen
-            throw new Error(`[This should never happen] Unexpected running status: ${state.status}`);
+            throw new Error(
+              `[This should never happen] Unexpected running status: ${state.status}`
+            );
           }
           resolve(accumulatedEvents);
         });
