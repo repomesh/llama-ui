@@ -3,6 +3,7 @@ import {
   Badge,
   Button,
   Label,
+  StopEvent,
   Switch,
   Table,
   TableBody,
@@ -36,7 +37,7 @@ export function RunDetailsPanel({
   handlerId,
   selectedWorkflow,
 }: RunDetailsPanelProps) {
-  const handler = useHandler(handlerId);
+  const { state, sync, subscribeToEvents } = useHandler(handlerId);
   const [compactJson, setCompactJson] = useState(false);
   const [hideInternal, setHideInternal] = useState(true);
   const [finalResult, setFinalResult] = useState<JSONValue | null>(null);
@@ -67,29 +68,38 @@ export function RunDetailsPanel({
   };
 
   useEffect(() => {
-    handler.subscribeToEvents(
-      {
-        onData: (event: WorkflowEvent) => {
-          setEvents((prev: WorkflowEvent[]) => {
-            return [...prev, event].sort(
-              (a, b) => a.timestamp.getTime() - b.timestamp.getTime(),
-            );
-          });
+    async function syncHandler() {
+      await sync(handlerId);
+    }
+    syncHandler();
+  }, [sync, handlerId]);
+
+  useEffect(() => {
+    if (state.status === "running") {
+      const { disconnect } = subscribeToEvents(
+        {
+          onData: (event: WorkflowEvent) => {
+            setEvents((prev: WorkflowEvent[]) => {
+              return [...prev, event].sort(
+                (a, b) => a.timestamp.getTime() - b.timestamp.getTime(),
+              );
+            });
+          },
+          onSuccess(allEvents) {
+            setEvents(allEvents);
+            setFinalResult((allEvents[allEvents.length - 1] as StopEvent)?.data?.result ?? null);
+          },
+          onError(error) {
+            setFinalResultError(error.message);
+          },
         },
-        onSuccess(allEvents) {
-          setEvents(allEvents);
-          setFinalResult(handler.result?.data.result ?? null);
-        },
-        onError(error) {
-          setFinalResultError(error.message);
-        },
-      },
-      true,
-    );
-    return () => {
-      handler.disconnect();
-    };
-  }, [handler]);
+        true,
+      );
+      return () => {
+        disconnect();
+      };
+    }
+  }, [subscribeToEvents, state.status]);
 
   // Reset events, timestamps and result when switching handlers
   useEffect(() => {
@@ -112,27 +122,27 @@ export function RunDetailsPanel({
           <h2 className="font-semibold text-sm">Run Details</h2>
           <div className="flex items-center gap-2">
             <Badge
-              variant={handler.status === "completed" ? "default" : "secondary"}
+              variant={state.status === "completed" ? "default" : "secondary"}
             >
-              {handler.status}
+              {state.status}
             </Badge>
             <SendEventDialog
               handlerId={handlerId}
               workflowName={selectedWorkflow ?? null}
               disabled={
-                !handler ||
-                handler.status === "completed" ||
-                handler.status === "failed"
+                !state ||
+                state.status === "completed" ||
+                state.status === "failed"
               }
             />
           </div>
         </div>
         <div className="flex items-center justify-between gap-2 mt-2">
           <span className="text-xs text-muted-foreground font-mono">
-            {handler.handlerId}
+            {state.handler_id}
           </span>
           <span className="text-xs text-muted-foreground font-mono">
-            Last updated: {handler.updatedAt?.toLocaleString()}
+            Last updated: {state.updated_at?.getTime()}
           </span>
         </div>
       </div>
@@ -149,7 +159,7 @@ export function RunDetailsPanel({
             }))}
             className="w-full h-full min-h-[400px]"
             isComplete={
-              handler?.status === "completed" || handler?.status === "failed"
+              state.status === "completed" || state.status === "failed"
             }
           />
         </div>
@@ -188,7 +198,7 @@ export function RunDetailsPanel({
 
           {/* Events List */}
           <div className="flex-1 overflow-auto">
-            {!handlerId ? (
+            {!state.handler_id ? (
               <div className="flex items-center justify-center h-full">
                 <p className="text-muted-foreground text-sm">
                   Start a run to see events

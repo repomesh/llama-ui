@@ -58,7 +58,7 @@ export function WorkflowDebugger() {
   const [editingUrl, setEditingUrl] = useState<string>(baseUrl);
   const [selectedWorkflow, setSelectedWorkflow] = useState<string | null>(null);
   const [activeHandlerId, setActiveHandlerId] = useState<string | null>(null);
-  const { workflows, fetch: fetchWorkflows } = useWorkflows();
+  const { state: workflowsState, sync: syncWorkflows } = useWorkflows();
   // Default to a 3/5 ratio (left/right) => 37.5% / 62.5%
   const [leftPanelWidth, setLeftPanelWidth] = useState(37.5); // percentage
   const [isDragging, setIsDragging] = useState(false);
@@ -66,7 +66,8 @@ export function WorkflowDebugger() {
   const [configPanelCollapsed, setConfigPanelCollapsed] = useState(false);
   const [isServerHealthy, setIsServerHealthy] = useState<boolean | null>(null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
-
+  
+  const workflows = workflowsState.workflows;
   const workflowsClient = useWorkflowsClient();
 
   const checkHealth = useCallback(async (): Promise<void> => {
@@ -92,8 +93,8 @@ export function WorkflowDebugger() {
   useEffect(() => {
     workflowsClient.setConfig({ baseUrl });
     checkHealth();
-    fetchWorkflows();
-  }, [baseUrl, workflowsClient, checkHealth, fetchWorkflows]);
+    syncWorkflows();
+  }, [baseUrl, workflowsClient, checkHealth, syncWorkflows]);
 
   const handleUrlSave = () => {
     const normalizedUrl = editingUrl.endsWith("/")
@@ -109,6 +110,7 @@ export function WorkflowDebugger() {
   };
 
   const handleRunStart = (handlerId: string) => {
+    console.log("handleRunStart", handlerId);
     setActiveHandlerId(handlerId);
   };
 
