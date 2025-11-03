@@ -71,7 +71,7 @@ export function createActions(state: HandlerState, client: Client) {
         client: client,
         path: { handler_id: state.handler_id },
         body: {
-          event: JSON.stringify(rawEvent),
+          event: rawEvent,
           step: step,
         },
       });

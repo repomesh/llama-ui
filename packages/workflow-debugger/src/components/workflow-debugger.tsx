@@ -110,7 +110,6 @@ export function WorkflowDebugger() {
   };
 
   const handleRunStart = (handlerId: string) => {
-    console.log("handleRunStart", handlerId);
     setActiveHandlerId(handlerId);
   };
 
