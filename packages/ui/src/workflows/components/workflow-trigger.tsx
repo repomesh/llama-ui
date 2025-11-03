@@ -10,8 +10,8 @@ import {
   type FileUploaderProps,
   type FileUploadData,
 } from "../../file-upload";
-import { useHandlerStore } from "../hooks/use-handler-store";
-import { Handler } from "../store/handler";
+import { useWorkflow } from "../hooks";
+import { HandlerState } from "../store/handler";
 import { JSONValue } from "../types";
 
 export interface WorkflowTriggerProps
@@ -25,7 +25,7 @@ export interface WorkflowTriggerProps
   ) => JSONValue;
 
   // Override onSuccess to provide workflow task result
-  onSuccess?: (handler: Handler) => void;
+  onSuccess?: (handler: HandlerState) => void;
   onError?: (error: Error) => void;
 }
 
@@ -38,7 +38,7 @@ export function WorkflowTrigger({
   description = "Upload files to start workflow processing",
   ...fileUploaderProps
 }: WorkflowTriggerProps) {
-  const { createHandler } = useHandlerStore();
+  const { createHandler } = useWorkflow(workflowName);
   const [isCreating, setIsCreating] = useState(false);
 
   const handleFileUpload = useCallback(
@@ -48,9 +48,9 @@ export function WorkflowTrigger({
         // If customWorkflowInput is provided, use it to create the workflow input
         if (customWorkflowInput) {
           const workflowInput = customWorkflowInput(data, fieldValues);
-          const task = await createHandler(workflowName, workflowInput);
+          const handler = await createHandler(workflowInput);
           toast.success("Workflow task created successfully!");
-          onSuccess?.(task);
+          onSuccess?.(handler);
           return;
         }
 
@@ -66,10 +66,10 @@ export function WorkflowTrigger({
         } as JSONValue;
 
         // Create workflow task
-        const task = await createHandler(workflowName, workflowInput);
+        const handler = await createHandler(workflowInput);
 
         toast.success("Workflow task created successfully!");
-        onSuccess?.(task);
+        onSuccess?.(handler);
         setIsCreating(false);
       } catch (err) {
         const error = err instanceof Error ? err : new Error(String(err));
@@ -79,7 +79,7 @@ export function WorkflowTrigger({
         throw error; // Re-throw to let FileUploader handle UI state
       }
     },
-    [workflowName, createHandler, onSuccess, onError, customWorkflowInput]
+    [createHandler, onSuccess, onError, customWorkflowInput]
   );
 
   return (

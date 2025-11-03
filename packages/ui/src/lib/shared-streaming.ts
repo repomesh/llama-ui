@@ -12,6 +12,7 @@ export interface StreamSubscriber<TEvent> {
   onStart?: () => void;
   onData?: (event: TEvent) => void;
   onError?: (error: Error) => void;
+  onCancel?: () => void;
   onSuccess?: (allEvents: TEvent[]) => void;
   onComplete?: () => void; // Called when stream ends (success or error)
 }

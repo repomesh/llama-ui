@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useHandlerStore, Skeleton, Handler } from "@llamaindex/ui";
+import { Skeleton, HandlerState, useHandlers } from "@llamaindex/ui";
 
 interface RunListPanelProps {
   activeHandlerId: string | null;
@@ -10,15 +10,17 @@ export function RunListPanel({
   activeHandlerId,
   onHandlerSelect,
 }: RunListPanelProps) {
-  const { handlers, fetchRunningHandlers } = useHandlerStore();
+  const { state: handlersState, sync } = useHandlers();
+  const handlers = handlersState.handlers;
   const [loading, setLoading] = useState(false);
+
   useEffect(() => {
     setLoading(true);
-    fetchRunningHandlers().finally(() => setLoading(false));
-  }, [fetchRunningHandlers]);
+    sync().finally(() => setLoading(false));
+  }, [sync]);
 
-  const formatHandlerDisplay = (handler: Handler) => {
-    const name = handler.workflowName || "Unknown";
+  const formatHandlerDisplay = (handler: HandlerState) => {
+    const name = handler.workflow_name || "Unknown";
     return `${name}`;
   };
 
@@ -54,10 +56,10 @@ export function RunListPanel({
             ) : (
               handlerList.map((handler) => (
                 <button
-                  key={handler.handlerId}
-                  onClick={() => onHandlerSelect(handler.handlerId)}
+                  key={handler.handler_id}
+                  onClick={() => onHandlerSelect(handler.handler_id)}
                   className={`w-full text-left px-2 py-1.5 transition-colors cursor-pointer border border-collapse ${
-                    activeHandlerId === handler.handlerId
+                    activeHandlerId === handler.handler_id
                       ? "bg-accent "
                       : "hover:bg-accent"
                   }`}
@@ -67,7 +69,7 @@ export function RunListPanel({
                       {formatHandlerDisplay(handler)}
                     </span>
                     <span className="text-[10px] text-muted-foreground font-mono">
-                      {handler.handlerId.slice(-8)}
+                      {handler.handler_id.slice(-8)}
                     </span>
                   </div>
                 </button>
