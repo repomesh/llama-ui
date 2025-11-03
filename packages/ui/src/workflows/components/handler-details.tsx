@@ -4,27 +4,28 @@
  */
 
 import { useState, useEffect } from "react";
-import type { Handler } from "../store/handler";
 import type { WorkflowEvent } from "../store/workflow-event";
 import { Button } from "@/base/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/base/card";
 import { Badge } from "@/base/badge";
 import { ScrollArea } from "@/base/scroll-area";
+import { useHandler } from "../hooks";
 
 export interface HandlerDetailsProps {
-  handler: Handler;
+  handlerId: string;
   onBack?: () => void;
 }
 
-export function HandlerDetails({ handler, onBack }: HandlerDetailsProps) {
+export function HandlerDetails({ handlerId, onBack }: HandlerDetailsProps) {
+  const { state, subscribeToEvents } = useHandler(handlerId);
   const [events, setEvents] = useState<WorkflowEvent[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
 
   useEffect(() => {
     // Subscribe to events when component mounts
-    if (handler.status === "running") {
+    if (state.status === "running") {
       setIsStreaming(true);
-      const { disconnect } = handler.subscribeToEvents(
+      const { disconnect } = subscribeToEvents(
         {
           onData: (event) => {
             setEvents((prev) => [...prev, event]);
@@ -45,7 +46,7 @@ export function HandlerDetails({ handler, onBack }: HandlerDetailsProps) {
 
       return () => disconnect();
     }
-  }, [handler]);
+  }, [state.status, subscribeToEvents]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -76,9 +77,9 @@ export function HandlerDetails({ handler, onBack }: HandlerDetailsProps) {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>{handler.workflowName}</CardTitle>
-            <Badge className={getStatusColor(handler.status)}>
-              {handler.status}
+            <CardTitle>{state.workflow_name}</CardTitle>
+            <Badge className={getStatusColor(state.status)}>
+              {state.status}
             </Badge>
           </div>
         </CardHeader>
@@ -89,47 +90,47 @@ export function HandlerDetails({ handler, onBack }: HandlerDetailsProps) {
                 Handler ID:
               </span>
               <p className="mt-1 font-mono text-xs break-all">
-                {handler.handlerId}
+                {state.handler_id}
               </p>
             </div>
             <div>
               <span className="font-medium text-muted-foreground">
                 Started At:
               </span>
-              <p className="mt-1">{handler.startedAt.toLocaleString()}</p>
+              <p className="mt-1">{state.started_at.toLocaleString()}</p>
             </div>
-            {handler.updatedAt && (
+            {state.updated_at && (
               <div>
                 <span className="font-medium text-muted-foreground">
                   Updated At:
                 </span>
-                <p className="mt-1">{handler.updatedAt.toLocaleString()}</p>
+                <p className="mt-1">{state.updated_at.toLocaleString()}</p>
               </div>
             )}
-            {handler.completedAt && (
+            {state.completed_at && (
               <div>
                 <span className="font-medium text-muted-foreground">
                   Completed At:
                 </span>
-                <p className="mt-1">{handler.completedAt.toLocaleString()}</p>
+                <p className="mt-1">{state.completed_at.toLocaleString()}</p>
               </div>
             )}
           </div>
 
-          {handler.error && (
+          {state.error && (
             <div className="rounded-lg bg-destructive/10 p-3">
               <span className="font-medium text-destructive">Error:</span>
-              <p className="mt-1 text-sm text-destructive">{handler.error}</p>
+              <p className="mt-1 text-sm text-destructive">{state.error}</p>
             </div>
           )}
 
-          {handler.result && (
+          {state.result && (
             <div className="rounded-lg bg-green-50 dark:bg-green-900/10 p-3">
               <span className="font-medium text-green-700 dark:text-green-400">
                 Result:
               </span>
               <pre className="mt-1 text-xs overflow-auto">
-                {JSON.stringify(handler.result.data, null, 2)}
+                {JSON.stringify(state.result.data, null, 2)}
               </pre>
             </div>
           )}

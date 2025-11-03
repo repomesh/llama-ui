@@ -10,10 +10,10 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-  Skeleton,
+  useWorkflows,
 } from "@llamaindex/ui";
 import { useState, useEffect, useCallback } from "react";
-import { getWorkflows, getHealth } from "@llamaindex/workflows-client";
+import { getHealth } from "@llamaindex/workflows-client";
 import { WorkflowConfigPanel } from "./workflow-config-panel";
 import { RunListPanel } from "./run-list-panel";
 import { RunDetailsPanel } from "./run-details-panel";
@@ -58,8 +58,7 @@ export function WorkflowDebugger() {
   const [editingUrl, setEditingUrl] = useState<string>(baseUrl);
   const [selectedWorkflow, setSelectedWorkflow] = useState<string | null>(null);
   const [activeHandlerId, setActiveHandlerId] = useState<string | null>(null);
-  const [workflows, setWorkflows] = useState<string[]>([]);
-  const [workflowsLoading, setWorkflowsLoading] = useState(true);
+  const { state: workflowsState, sync: syncWorkflows } = useWorkflows();
   // Default to a 3/5 ratio (left/right) => 37.5% / 62.5%
   const [leftPanelWidth, setLeftPanelWidth] = useState(37.5); // percentage
   const [isDragging, setIsDragging] = useState(false);
@@ -68,6 +67,7 @@ export function WorkflowDebugger() {
   const [isServerHealthy, setIsServerHealthy] = useState<boolean | null>(null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
+  const workflows = workflowsState.workflows;
   const workflowsClient = useWorkflowsClient();
 
   const checkHealth = useCallback(async (): Promise<void> => {
@@ -89,30 +89,12 @@ export function WorkflowDebugger() {
     }
   }, [workflowsClient]);
 
-  const fetchWorkflows = useCallback(async () => {
-    try {
-      setWorkflowsLoading(true);
-      const { data, error } = await getWorkflows({ client: workflowsClient });
-      if (data) {
-        setWorkflows(data.workflows || []);
-      } else {
-        if (error) console.error("Failed to fetch workflows:", error);
-        setWorkflows([]);
-      }
-    } catch (error) {
-      console.error("Failed to fetch workflows:", error);
-      setWorkflows([]);
-    } finally {
-      setWorkflowsLoading(false);
-    }
-  }, [workflowsClient]);
-
   // Update client config when baseUrl changes
   useEffect(() => {
     workflowsClient.setConfig({ baseUrl });
-    void checkHealth();
-    void fetchWorkflows();
-  }, [baseUrl, workflowsClient, checkHealth, fetchWorkflows]);
+    checkHealth();
+    syncWorkflows();
+  }, [baseUrl, workflowsClient, checkHealth, syncWorkflows]);
 
   const handleUrlSave = () => {
     const normalizedUrl = editingUrl.endsWith("/")
@@ -217,21 +199,11 @@ export function WorkflowDebugger() {
               <SelectValue placeholder="Select workflow..." />
             </SelectTrigger>
             <SelectContent>
-              {workflowsLoading ? (
-                <div className="p-2">
-                  <Skeleton className="h-4 w-32" />
-                </div>
-              ) : workflows.length === 0 ? (
-                <div className="p-2 text-sm text-muted-foreground">
-                  No workflows found. Check server connection.
-                </div>
-              ) : (
-                workflows.map((workflow) => (
-                  <SelectItem key={workflow} value={workflow}>
-                    {workflow}
-                  </SelectItem>
-                ))
-              )}
+              {Object.keys(workflows).map((workflow) => (
+                <SelectItem key={workflow} value={workflow}>
+                  {workflow}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -313,12 +285,14 @@ export function WorkflowDebugger() {
                 className="border-r border-border overflow-auto"
                 style={{ width: `${leftPanelWidth}%` }}
               >
-                <WorkflowConfigPanel
-                  selectedWorkflow={selectedWorkflow}
-                  onRunStart={handleRunStart}
-                  activeHandlerId={activeHandlerId}
-                  onCollapse={() => setConfigPanelCollapsed(true)}
-                />
+                {selectedWorkflow && (
+                  <WorkflowConfigPanel
+                    selectedWorkflow={selectedWorkflow}
+                    onRunStart={handleRunStart}
+                    activeHandlerId={activeHandlerId}
+                    onCollapse={() => setConfigPanelCollapsed(true)}
+                  />
+                )}
               </div>
 
               {/* Resizable Gutter */}
@@ -354,10 +328,12 @@ export function WorkflowDebugger() {
                 : `${100 - leftPanelWidth}%`,
             }}
           >
-            <RunDetailsPanel
-              handlerId={activeHandlerId}
-              selectedWorkflow={selectedWorkflow}
-            />
+            {activeHandlerId && (
+              <RunDetailsPanel
+                handlerId={activeHandlerId}
+                selectedWorkflow={selectedWorkflow}
+              />
+            )}
           </div>
         </div>
       </div>
