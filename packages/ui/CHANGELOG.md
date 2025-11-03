@@ -1,5 +1,18 @@
 # @llamaindex/ui
 
+## 3.0.0
+
+### Major Changes
+
+- 659ebae: Updates file upload UI to conform to new platform standards. Transfer tabs/input from platfrom to UI library. Add ability for file upload in UI. File upload is broken up into modular components and util files. Be sure to check and update current imports.
+
+### Patch Changes
+
+- 5578071: refactor workflow/handler store
+- ee7de57: Make useItemData isMock optional
+- 1d56861: Add filter/styles to grid
+- d3423fd: Upgrade to better support react 19
+
 ## 3.0.0-alpha.0
 
 ### Major Changes
