@@ -1,5 +1,21 @@
 # @llamaindex/workflow-debugger
 
+## 0.0.6
+
+### Patch Changes
+
+- 5578071: refactor workflow/handler store
+- d3423fd: Upgrade to better support react 19
+- Updated dependencies [acb31b5]
+- Updated dependencies [5578071]
+- Updated dependencies [ee7de57]
+- Updated dependencies [1d56861]
+- Updated dependencies [d3423fd]
+- Updated dependencies [31a2a69]
+- Updated dependencies [659ebae]
+  - @llamaindex/workflows-client@1.7.0
+  - @llamaindex/ui@3.0.0
+
 ## 0.0.5
 
 ### Patch Changes
