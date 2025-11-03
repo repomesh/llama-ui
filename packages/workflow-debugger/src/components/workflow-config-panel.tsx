@@ -4,7 +4,8 @@ import {
   Button,
   Textarea,
   Skeleton,
-  useHandlerStore,
+  useWorkflow,
+  useHandlers,
 } from "@llamaindex/ui";
 import { PanelRightClose } from "lucide-react";
 import { JsonSchemaEditor } from "./json-schema-editor";
@@ -19,7 +20,7 @@ export type JSONValue =
   | Array<JSONValue>;
 
 interface WorkflowConfigPanelProps {
-  selectedWorkflow: string | null;
+  selectedWorkflow: string;
   onRunStart: (handlerId: string) => void;
   activeHandlerId: string | null;
   onCollapse?: () => void;
@@ -53,7 +54,8 @@ export function WorkflowConfigPanel({
   const [isCreating, setIsCreating] = useState(false);
 
   const workflowsClient = useWorkflowsClient();
-  const { createHandler } = useHandlerStore();
+  const { createHandler } = useWorkflow(selectedWorkflow);
+  const { setHandler } = useHandlers();
 
   useEffect(() => {
     const fetchSchema = async () => {
@@ -99,8 +101,9 @@ export function WorkflowConfigPanel({
 
     try {
       setIsCreating(true);
-      const handler = await createHandler(selectedWorkflow, formData);
-      onRunStart(handler.handlerId);
+      const handler = await createHandler(formData);
+      setHandler(handler);
+      onRunStart(handler.handler_id);
 
       // Auto-collapse the config panel after starting a run
       if (onCollapse) {

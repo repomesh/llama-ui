@@ -3,25 +3,22 @@
  * Displays a list of workflow handlers with their status
  */
 
-import { useHandlerStore } from "../hooks/use-handler-store";
-import type { Handler } from "../store/handler";
+import { useHandlers } from "../hooks";
 import { Button } from "@/base/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/base/card";
 import { Badge } from "@/base/badge";
+import { RunStatus } from "@/src";
+import { HandlerState } from "../store/handler";
 
 export interface HandlerListProps {
-  onSelectHandler?: (handler: Handler) => void;
+  onSelectHandler?: (handlerId: string) => void;
 }
 
 export function HandlerList({ onSelectHandler }: HandlerListProps) {
-  const handlers = useHandlerStore((state) => state.handlers);
-  const fetchRunningHandlers = useHandlerStore(
-    (state) => state.fetchRunningHandlers
-  );
+  const { state, sync } = useHandlers();
+  const handlerList = Object.values(state.handlers);
 
-  const handlerArray = Object.values(handlers);
-
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: RunStatus) => {
     switch (status) {
       case "running":
         return "bg-blue-500";
@@ -40,12 +37,12 @@ export function HandlerList({ onSelectHandler }: HandlerListProps) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Workflow Handlers</h2>
-        <Button onClick={() => fetchRunningHandlers()} variant="outline">
+        <Button onClick={() => sync()} variant="outline">
           Refresh
         </Button>
       </div>
 
-      {handlerArray.length === 0 ? (
+      {handlerList.length === 0 ? (
         <Card>
           <CardContent className="pt-6">
             <p className="text-center text-muted-foreground">
@@ -55,16 +52,16 @@ export function HandlerList({ onSelectHandler }: HandlerListProps) {
         </Card>
       ) : (
         <div className="space-y-2">
-          {handlerArray.map((handler) => (
+          {handlerList.map((handler: HandlerState) => (
             <Card
-              key={handler.handlerId}
+              key={handler.handler_id}
               className="cursor-pointer hover:bg-accent transition-colors"
-              onClick={() => onSelectHandler?.(handler)}
+              onClick={() => onSelectHandler?.(handler.handler_id)}
             >
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-medium">
-                    {handler.workflowName}
+                    {handler.workflow_name}
                   </CardTitle>
                   <Badge className={getStatusColor(handler.status)}>
                     {handler.status}
@@ -75,16 +72,16 @@ export function HandlerList({ onSelectHandler }: HandlerListProps) {
                 <div className="text-xs text-muted-foreground space-y-1">
                   <div>
                     <span className="font-medium">ID:</span>{" "}
-                    {handler.handlerId.slice(0, 8)}...
+                    {handler.handler_id.slice(0, 8)}...
                   </div>
                   <div>
                     <span className="font-medium">Started:</span>{" "}
-                    {handler.startedAt.toLocaleString()}
+                    {handler.started_at.toLocaleString()}
                   </div>
-                  {handler.completedAt && (
+                  {handler.completed_at && (
                     <div>
                       <span className="font-medium">Completed:</span>{" "}
-                      {handler.completedAt.toLocaleString()}
+                      {handler.completed_at?.toLocaleString()}
                     </div>
                   )}
                 </div>

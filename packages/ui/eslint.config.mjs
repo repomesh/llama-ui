@@ -32,6 +32,7 @@ const languageOptions = {
     ecmaVersion: 2017,
     sourceType: "module",
     projectService: true,
+    tsconfigRootDir: import.meta.dirname,
   },
 };
 
