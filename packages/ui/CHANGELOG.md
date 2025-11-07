@@ -1,5 +1,12 @@
 # @llamaindex/ui
 
+## 3.1.1
+
+### Patch Changes
+
+- 029e2ea: Fix WorkflowTrigger title ignored
+- 35b0ca2: require latest version of workflows-client for peer dep
+
 ## 3.1.0
 
 ### Minor Changes
