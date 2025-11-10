@@ -15,6 +15,7 @@ import {
 import { logger } from "@shared/logger";
 import { isStopEvent, StopEvent, WorkflowEvent } from "./workflow-event";
 import { proxy } from "valtio";
+import { getOrCreate } from "../../shared/store";
 
 export interface HandlerState
   extends Omit<
@@ -25,6 +26,10 @@ export interface HandlerState
   updated_at?: Date;
   completed_at?: Date;
   result?: StopEvent;
+  // indicates that there is a current sync operation to query the handler state.
+  loading: boolean;
+  // indicates an error loading the actual handler state. See status "failed" and the error field for actual workflow run errors.
+  loadingError?: string;
 }
 
 const emptyState: HandlerState = {
@@ -36,37 +41,50 @@ const emptyState: HandlerState = {
   completed_at: undefined,
   error: "",
   result: undefined,
+  loading: true,
+  loadingError: undefined,
 };
 
-export const createState = (rawHandler?: RawHandler): HandlerState => {
-  const state = rawHandler
-    ? {
-        handler_id: rawHandler.handler_id,
-        workflow_name: rawHandler.workflow_name,
-        status: rawHandler.status,
-        started_at: rawHandler.started_at,
-        updated_at: rawHandler.updated_at
-          ? new Date(rawHandler.updated_at)
-          : undefined,
-        completed_at: rawHandler.completed_at
-          ? new Date(rawHandler.completed_at)
-          : undefined,
-        error: rawHandler.error,
-        result: rawHandler.result
-          ? (StopEvent.fromRawEvent(
-              rawHandler.result as EventEnvelopeWithMetadata
-            ) as StopEvent)
-          : undefined,
-      }
-    : emptyState;
+export const createState = (
+  rawHandler: Partial<RawHandler> = {}
+): HandlerState => {
+  const state = {
+    handler_id: rawHandler.handler_id ?? emptyState.handler_id,
+    workflow_name: rawHandler.workflow_name ?? emptyState.workflow_name,
+    status: rawHandler.status ?? emptyState.status,
+    started_at: rawHandler.started_at ?? emptyState.started_at,
+    updated_at: rawHandler.updated_at
+      ? new Date(rawHandler.updated_at)
+      : emptyState.updated_at,
+    completed_at: rawHandler.completed_at
+      ? new Date(rawHandler.completed_at)
+      : emptyState.completed_at,
+    error: rawHandler.error,
+    result: rawHandler.result
+      ? (StopEvent.fromRawEvent(
+          rawHandler.result as EventEnvelopeWithMetadata
+        ) as StopEvent)
+      : emptyState.result,
+    // use "status" field as a canary to indicate that this is a real response
+    loading: rawHandler.status ? false : emptyState.loading,
+    loadingError: undefined,
+  };
 
   return proxy(state);
 };
 
 export function createActions(state: HandlerState, client: Client) {
   const actions = {
-    async sendEvent(event: WorkflowEvent, step?: string) {
-      const rawEvent = event.toRawEvent(); // convert to raw event before sending
+    async sendEvent(
+      event: WorkflowEvent | EventEnvelopeWithMetadata,
+      step?: string
+    ) {
+      if (!state.handler_id) {
+        throw new Error("Handler ID is not yet initialized");
+      }
+      // convert to raw event before sending
+      const rawEvent =
+        event instanceof WorkflowEvent ? event.toRawEvent() : event;
       const data = await postEventsByHandlerId({
         client: client,
         path: { handler_id: state.handler_id },
@@ -78,30 +96,34 @@ export function createActions(state: HandlerState, client: Client) {
 
       return data.data;
     },
-    async sync(handlerId?: string) {
-      const data = await getHandlersByHandlerId({
-        client: client,
-        path: { handler_id: handlerId ?? state.handler_id },
-      });
+    async sync() {
+      state.loading = true;
+      state.loadingError = undefined;
+      const resolvedHandlerId = state.handler_id;
+      if (!resolvedHandlerId) return;
 
-      Object.assign(state, data.data, {
-        updated_at: data.data?.updated_at
-          ? new Date(data.data.updated_at)
-          : undefined,
-        completed_at: data.data?.completed_at
-          ? new Date(data.data.completed_at)
-          : undefined,
-        result: data.data?.result
-          ? (StopEvent.fromRawEvent(
-              data.data.result as EventEnvelopeWithMetadata
-            ) as StopEvent)
-          : undefined,
-      });
+      try {
+        const data = await getHandlersByHandlerId({
+          client: client,
+          path: { handler_id: resolvedHandlerId },
+        });
+        const updated = createState(data.data ?? {});
+
+        Object.assign(state, updated);
+      } catch (error) {
+        state.loadingError =
+          error instanceof Error ? error.message : String(error);
+      } finally {
+        state.loading = false;
+      }
     },
     subscribeToEvents(
       callbacks?: StreamSubscriber<WorkflowEvent>,
       includeInternal = false
     ): StreamOperation<WorkflowEvent> {
+      if (!state.handler_id) {
+        throw new Error("Handler ID is not yet initialized");
+      }
       const streamKey = `handler:${state.handler_id}`;
 
       // Convert callback to SharedStreamingManager subscriber
@@ -250,4 +272,25 @@ function streamByEventSource(
       resolve(accumulatedEvents);
     });
   });
+}
+/**
+ * Get's the handler state from the global store or creates a new one if it doesn't exist, and optionally applies an update
+ * @param update
+ * @returns The updated handler state
+ */
+export function getOrCreateHandler(update: Partial<RawHandler>): HandlerState {
+  const current = getOrCreate(`handler:${update.handler_id}`, () =>
+    createState(update)
+  );
+  return applyUpdateToHandler(current, update);
+}
+
+export function applyUpdateToHandler(
+  state: HandlerState,
+  update: Partial<RawHandler>
+): HandlerState {
+  const updated = createState(update);
+  // mutate existing state instead of creating a new one to maintain global singleton
+  Object.assign(state, updated);
+  return state;
 }
